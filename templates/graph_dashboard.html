@@ -4,7 +4,7 @@
 <h1 class="mb-4">Earthquake Graph Dashboard</h1>
 <form class="row g-3 mb-4" method="get" action="{{ url_for('dashboard.graph_earthquakes_page') }}">
   <div class="col-md-6">
-    <label for="location" class="form-label">Select Country/Region:</label>
+    <label for="location" class="form-label">Select Countrheay/Region:</label>
     <select class="form-select" name="location" id="location">
       {% for country in countries %}
         <option value="{{ country }}" {% if country == current_location %}selected{% endif %}>{{ country }}</option>

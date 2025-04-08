@@ -1,0 +1,19 @@
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: quakewatch-web-dpl
+    spec:
+      replicas: 2 # Run a single instance of your app
+      selector:
+        matchLabels:
+          app: quakewatch-web
+      template:
+        metadata:
+          labels:
+            app: quakewatch-web
+        spec:
+          containers:
+            - name: quakewatch-web-container
+              image: alkon100/quakewatch-web:2.0.0
+              ports:
+                - containerPort: 5000 # for documentation only, no real impact

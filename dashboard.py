@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, jsonify, request, send_file, current_app
 from utils import generate_graph, get_top_earthquakes, get_last_earthquake, COUNTRIES
 from datetime import datetime, timedelta
+from utils import COUNTRIES, get_last_earthquakes
 import requests
 
 dashboard_blueprint = Blueprint('dashboard', __name__)
@@ -45,17 +46,76 @@ class EarthquakeDashboard:
     @staticmethod
     @dashboard_blueprint.route('/telaviv-earthquakes')
     def telaviv_earthquakes():
-        # Return raw Tel Aviv earthquake data (last 30 days)
-        start_time = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
-        params = {
-            'format': 'geojson',
-            'latitude': 32.0853,
-            'longitude': 34.7818,
-            'maxradiuskm': 100,
-            'starttime': start_time
-        }
-        usgs_url = "https://earthquake.usgs.gov/fdsnws/event/1/query"
-        response = requests.get(usgs_url, params=params)
+        return EarthquakeDashboard.get_earthquake_data_by_location_name("Tel Aviv, Israel")
+
+    @dashboard_blueprint.route('/earthquakes/<location_name>')
+    def earthquakes_by_location(location_name):
+        """
+        Returns earthquake data for a location from the COUNTRIES config via GET.
+        """
+        return EarthquakeDashboard.get_earthquake_data_by_location_name(location_name)
+
+    from flask import request
+
+    @dashboard_blueprint.route('/today-extreme-earthquakes/<float:minmag>')
+    def today_extreme_earthquakes(minmag):
+        """
+        Fetch extreme earthquakes (magnitude > minmag) for the last day.
+        """
+        earthquakes_resp = get_last_earthquakes(1, minmag)
+
+        if isinstance(earthquakes_resp, dict) and 'items' not in earthquakes_resp:
+            earthquakes_resp = {
+                'message': f"No earthquake events found today in the range of {minmag} or more"
+            }
+
+        # Check if events were returned and update the message if not
+        if 'events' in earthquakes_resp and not earthquakes_resp['events']:
+            earthquakes_resp['message'] = f"No earthquake events found today in the range of {minmag} or more"
+
+        return jsonify(earthquakes_resp)
+
+###########################################################################
+# Helper methods to retrieve earthquake data
+###########################################################################
+    @staticmethod
+    def get_earthquake_data_by_location_name(location_name: str):
+        """
+        Generic method to return earthquake data for a given location name from COUNTRIES config.
+        """
+        config = COUNTRIES.get(location_name)
+        if config:
+            latitude = config.get("lat")
+            longitude = config.get("lon")
+            radius = config.get("radius")
+            return EarthquakeDashboard._fetch_earthquake_data(latitude, longitude, max_radius_km=radius)
+        else:
+            current_app.logger.error(f"{location_name} configuration not found in COUNTRIES")
+            return jsonify(error=f"{location_name} configuration not found"), 500
+
+    @staticmethod
+    def _fetch_earthquake_data(latitude, longitude, days=30, max_radius_km=100):
+        """
+        Fetches and processes earthquake data from the USGS API.
+
+        Args:
+            latitude (float): The latitude of the center point.
+            longitude (float): The longitude of the center point.
+            days (int): The number of past days to retrieve data for (default is 30).
+            max_radius_km (int): The maximum radius in kilometers to search within (default is 100).
+
+        Returns:
+            tuple: A tuple containing a dictionary with earthquake data and the HTTP status code.
+                   Returns an error dictionary and status code on failure.
+        """
+        response = EarthquakeDashboard._fetch_usgs_data(latitude, longitude, days, max_radius_km)
+        return EarthquakeDashboard._process_earthquake_response(response)
+
+    @staticmethod
+    def _process_earthquake_response(response):
+        """
+        Processes the JSON response from the USGS API.
+        """
         if response.status_code == 200:
             data = response.json()
             processed_events = []
@@ -79,14 +139,39 @@ class EarthquakeDashboard:
                 'count': len(processed_events),
                 'events': processed_events
             }
-            return jsonify(result), 200
+            return jsonify(result), response.status_code
         else:
             current_app.logger.error("Error fetching data from USGS API")
             return jsonify(error="Error fetching data from USGS API"), response.status_code
 
     @staticmethod
+    def _fetch_usgs_data(latitude, longitude, days=30, max_radius_km=100):
+        """
+        Fetches raw earthquake data from the USGS API.
+        """
+        start_time = (datetime.utcnow() - timedelta(days=days)).strftime('%Y-%m-%d')
+        params = {
+            'format': 'geojson',
+            'latitude': latitude,
+            'longitude': longitude,
+            'maxradiuskm': max_radius_km,
+            'starttime': start_time
+        }
+        usgs_url = "https://earthquake.usgs.gov/fdsnws/event/1/query"
+        try:
+            response = requests.get(usgs_url, params=params)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.RequestException as e:
+            current_app.logger.error(f"Error fetching data from USGS API: {e}")
+            return None
+
+############################# Graph presentation methods ######################
+    @staticmethod
     @dashboard_blueprint.route('/graph-earthquakes.png')
     def graph_earthquakes_image():
+        if 'True':
+            return jsonify(message="Graph endpoint temporary disabled"), 501
         days = int(request.args.get('days', 30))
         loc_name = request.args.get('location', "Tel Aviv, Israel")
         location = COUNTRIES.get(loc_name, COUNTRIES["Tel Aviv, Israel"])
@@ -96,6 +181,8 @@ class EarthquakeDashboard:
     @staticmethod
     @dashboard_blueprint.route('/graph-earthquakes-5years.png')
     def graph_earthquakes_5years_image():
+        if 'True':
+            return jsonify(message="Graph endpoint temporary disabled"), 501
         days = 5 * 365  # Approximate days in 5 years
         loc_name = request.args.get('location', "Tel Aviv, Israel")
         location = COUNTRIES.get(loc_name, COUNTRIES["Tel Aviv, Israel"])
@@ -105,6 +192,8 @@ class EarthquakeDashboard:
     @staticmethod
     @dashboard_blueprint.route('/graph-earthquakes')
     def graph_earthquakes_page():
+        if 'True':
+            return jsonify(message="Graph endpoint temporary disabled"), 501
         days = int(request.args.get('days', 30))
         loc_name = request.args.get('location', "Tel Aviv, Israel")
         top_events = get_top_earthquakes(limit=5)
@@ -116,5 +205,3 @@ class EarthquakeDashboard:
                                countries=list(COUNTRIES.keys()),
                                top_events=top_events,
                                last_event=last_event)
-
-# The static methods in EarthquakeDashboard register the routes automatically.

@@ -1,5 +1,5 @@
-import matplotlib
-matplotlib.use('Agg')  # Force non-GUI backend before any other matplotlib import
+# import matplotlib
+# matplotlib.use('Agg')  # Force non-GUI backend before any other matplotlib import
 
 import os
 import logging

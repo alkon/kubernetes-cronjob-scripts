@@ -33,6 +33,9 @@ COPY --from=builder /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/
 
 # Copy application files
 COPY app.py .
+COPY dashboard.py .
+COPY utils.py .
+COPY templates/ templates/
 
 EXPOSE 5000
 

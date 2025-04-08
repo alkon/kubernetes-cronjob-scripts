@@ -1,0 +1,56 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment-specific files
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Package distribution
+*.egg
+*.whl
+dist/
+build/
+sdist/
+wheelhouse/
+
+# Logs and temp files
+*.log
+*.tmp
+tmp/
+temp/
+TEMP/
+.pytest_cache/
+__pycache__
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE-specific files
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.settings/
+.buildpath
+.metadata/
+
+# Docker related
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Kubernetes related (you might want to keep your manifests)
+# manifests/*
+# !manifests/crj.yaml
+# !manifests/cfm.yaml
+# !manifests/pvc.yaml
+
+# Add any other project-specific files or directories you want to ignore

@@ -4,4 +4,4 @@ mkdir -p "$LOG_DIR"
 date >> "$LOG_DIR/date.log"
 echo "---" >> "$LOG_DIR/date.log"
 cat "$LOG_DIR/date.log"
-sleep 10
+#sleep 10
