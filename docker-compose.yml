@@ -1,0 +1,20 @@
+services:
+  web:
+    build:
+      context: .
+    image: quakewatch-web:1.0.0 # Tag with version 1.0.0
+    ports:
+      - "${APP_PORT}:${APP_PORT}" # Uses environment variable for port mapping
+    environment:
+      APP_PORT: ${APP_PORT}
+      #FLASK_ENV: development # Remove for production
+    healthcheck:
+      test: [ "CMD", "curl", "--silent", "--fail", "http://localhost:5000/health" ]
+      interval: 10s
+      retries: 5
+      start_period: 45s  # Add some grace period for app startup
+      timeout: 10s
+    volumes:
+      - quake_data:/data # Mount quake_data volume to /data
+volumes: # Define the named volume
+  quake_data:
