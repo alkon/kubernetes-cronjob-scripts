@@ -31,6 +31,11 @@ spec:
                 configMapKeyRef:
                   name: log-paths-cfm
                   key: shared_log_path
+          resources:
+            requests:
+              cpu: "100m"
+            limits:
+              cpu: "500m"
           livenessProbe:
             httpGet:
               path: /health # Working health check

@@ -129,35 +129,66 @@
 - Implement HPA in combination with a simulated CPU load generator.
 - Demonstrate **scalability** and **auto-recovery**.
 
-#### How It Works
+#### Steps
+- **CPU resources management** addition:  `resources.requests.cpu:"100m"`
+  and `resources.limits.cpu:"500m"` to `crj.yaml`(`stress-ng` container) and `dpl.yaml` (`quakewatch-web-container`)
+  
+   
+-  ⚠️ **Deploy the Metrics Server:** Ensure the Kubernetes Metrics Server is installed in the cluster (for load tests).
+```bash
+   kubectl apply -f [https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml](https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml)
+```
+-  **Apply the HPA Manifest:** 
+```bash
+    kubectl apply -f hpa.yaml
+```
+-  **Apply the CPU Load Simulation (CronJob) Manifest:**
+```bash
+    kubectl apply -f crj.yaml
+```
+-  **Apply the Deployment Manifest:**
+```bash
+    kubectl apply -f dpl.yaml
+```
+    
+#### Key Manifests
 
-- A `CronJob` named `cpu-burst-cronjob` runs every minute.
+- `hpa.yaml` – Defines the scaling policy for the target Deployment based on CPU utilization (for test purposes)
+- `crj.yaml` (its `cpu-burst-cronjob` part) – Simulates CPU load on a schedule.
+- `dpl.yaml` The target Deployment for the HPA (`cpu-load-generator-dpl`) 
+
+#### How It Works 
+
+- For test env a `CronJob` named `cpu-burst-cronjob` runs every minute.
 - It triggers a short burst of CPU stress using `stress-ng`.
 - The `HPA` named `cpu-load-hpa` monitors the average CPU utilization of the Deployment named `cpu-load-generator-dpl`.
 - When the average CPU utilization exceeds **50%**, HPA automatically increases the number of pod replicas (up to a maximum of 5).
 - It scales back down automatically as the CPU load subsides.
-- CPU resource `requests/limits` are defined in the Deployment YAML (although the target Deployment for HPA is `cpu-load-generator-dpl`, which isn't provided here, the principle remains the same).
+---
+- The tested CPU resource `requests/limits` are defined in the `dpl.yaml` to take scale advantages for higher-level environments (staging and prod)
 
-#### 🛠️ Key Components
-
-- `crj.yaml` (first part) – Defines the `cpu-burst-cronjob` which simulates CPU load.
-- `hpa.yaml` – Defines the `cpu-load-hpa` scaling policy.
-- CPU resource `requests/limits` defined in the relevant Deployment YAML (e.g., `cpu-load-generator-dpl`).
-
-#### ⚠️ Metrics Server Required
-
-Install the Kubernetes Metrics Server for HPA to function:
-
+#### Verification
+-  **Monitor HPA Status:** Observe the HPA's status to see its current state
 ```bash
-kubectl apply -f [https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml](https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml)
+    kubectl get hpa cpu-load-hpa -w
 ```
+- The `TARGETS` column shows the current CPU utilization percentage of the `quakewatch-web-dpl` Pods. 
+- The `REPLICAS` column shows the current number of Pods managed by the HPA. 
+- The `REPLICAS` should increase and decrease over time as the CPU load simulation runs.
+---
+-  **Monitor Pod Count:** Track the number of app Pods to see the scaling in action:
+ ```bash
+    kubectl get pods -w -l app=quakewatch-web
+ ```
+ - If the CPU utilization goes above the target (50%) new `quakewatch-web-dpl` Pods created. 
+ - When CPU utilization drops, the Pods termination begins.
 
 ### 3. Advanced Kubernetes Concepts
 
-#### a) Use ConfigMaps and Secrets to Manage Configuration
+#### a. Use ConfigMaps and Secrets to Manage Configuration
 
-#### Purpose:
-- Using ConfigMaps and Secrets improves **scalability** by letting to adjust runtime behavior (like logging paths or feature toggles) without changing the deployment logic. This decouples special-purpose configs from core manifests, making it easier to manage, override, or reuse them across environments.
+#### Goal:
+- To externalize application configuration from container images, enhancing **scalability** and **manageability**. ConfigMaps handle non-sensitive configuration, while Secrets securely manage sensitive information.
 
 #### How It Works
 
@@ -167,7 +198,7 @@ kubectl apply -f [https://github.com/kubernetes-sigs/metrics-server/releases/lat
 - **Access token** used for auditing/debug purposes is stored in `Secret` (`quake-log-token`) and injected into the logging container at runtime.
 - A shared **PersistentVolumeClaim** (`quake-logs-pvc`) enables both the app and the logger to read/write logs.
 
-#### 🛠️ Key Components
+#### 🛠️ Key Manifests
 
 - `log-paths-cfm.yaml` – defines shared log path.
 - `failure-config.yaml` – toggles failure simulation logic.
