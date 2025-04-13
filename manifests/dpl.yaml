@@ -1,19 +1,49 @@
-    apiVersion: apps/v1
-    kind: Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quakewatch-web-dpl
+spec:
+  replicas: 2 # Run two instances of your app
+  selector:
+    matchLabels:
+      app: quakewatch-web
+  template:
     metadata:
-      name: quakewatch-web-dpl
+      labels:
+        app: quakewatch-web
     spec:
-      replicas: 2 # Run a single instance of your app
-      selector:
-        matchLabels:
-          app: quakewatch-web
-      template:
-        metadata:
-          labels:
-            app: quakewatch-web
-        spec:
-          containers:
-            - name: quakewatch-web-container
-              image: alkon100/quakewatch-web:2.0.0
-              ports:
-                - containerPort: 5000 # for documentation only, no real impact
+      shareProcessNamespace: true  # Enable shared PID namespace for all containers in this pod
+      volumes:
+        - name: log-volume
+          persistentVolumeClaim:
+            claimName: quake-logs-pvc
+      containers:
+        - name: quakewatch-web-container
+          image: alkon100/quakewatch-web:2.0.1
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: log-volume
+              mountPath: /shared-logs
+          env:
+            - name: SHARED_LOG_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: log-paths-cfm
+                  key: shared_log_path
+          livenessProbe:
+            httpGet:
+              path: /health # Working health check
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+#         # Simulate crash after every 1 minute, if FAILURE_MODE is enabled
+        - name: failure-simulator # Sidecar container
+          image: busybox:latest
+          command: [ "/bin/sh", "-c", "if [ \"$FAILURE_MODE\" = \"true\" ]; then sleep 60; kill 1; else sleep 3600; fi" ]
+          env:
+            - name: FAILURE_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: failure-config
+                  key: enabled

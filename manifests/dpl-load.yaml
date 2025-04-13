@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-load-generator-dpl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cpu-load
+  template:
+    metadata:
+      labels:
+        app: cpu-load
+    spec:
+      containers:
+      - name: cpu-load-container
+        image: vish/stress   # A known image to generate CPU stress; available on Docker Hub
+        args: ["-cpus", "1"]
+        resources:
+          requests:
+            cpu: "200m"
+          limits:
+            cpu: "400m"

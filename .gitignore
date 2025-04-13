@@ -49,7 +49,7 @@ docker-compose.local.yml
 
 # Kubernetes related (you might want to keep your manifests)
 # manifests/*
-# !manifests/crj.yaml
+# !manifests/_crj.yaml
 # !manifests/cfm.yaml
 # !manifests/pvc.yaml
 

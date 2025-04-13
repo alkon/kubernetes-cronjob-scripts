@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: quake-log-token
+type: Opaque
+stringData:
+  ACCESS_TOKEN: topsecret-log-token-123

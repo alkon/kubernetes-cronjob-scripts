@@ -1,0 +1,33 @@
+## Used to test the Cluster setup only
+
+#apiVersion: v1
+#kind: Pod
+#metadata:
+#  name: quakewatch-web-pod
+#  labels:
+#    app: quakewatch-web
+#spec:
+#  containers:
+#    - name: quakewatch-web-container
+#      image: alkon100/quakewatch-web:2.0.1
+#      ports:
+#        - containerPort: 5000
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: quake-log-reader-pod
+spec:
+  containers:
+    - name: reader
+      image: busybox:latest
+      command: [ "sleep", "3600" ]  # Keeps the pod running for 1 hour
+      volumeMounts:
+        - name: quake-logs
+          mountPath: /mnt/logs
+  volumes:
+    - name: quake-logs
+      persistentVolumeClaim:
+        claimName: quake-logs-pvc
+  restartPolicy: Never
+

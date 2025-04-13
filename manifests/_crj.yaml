@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: log-crj
+spec:
+  schedule: "*/1 * * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          volumes:
+          - name: log-volume
+            persistentVolumeClaim:
+              claimName: log-pvc
+          - name: scripts-volume
+            emptyDir: {}
+          initContainers:
+          - name: get-scripts
+            image: alpine/git
+            command: ["git", "clone", "https://github.com/alkon/kubernetes-cronjob-scripts.git", "/scripts"]
+            volumeMounts:
+            - name: scripts-volume
+              mountPath: /scripts
+          containers:
+          - name: date-generator
+            image: busybox:latest
+            command: ["/bin/sh", "/scripts/log_script.sh"]
+            volumeMounts:
+            - name: log-volume
+              mountPath: /shared-logs
+            - name: scripts-volume
+              mountPath: /scripts
+            env:
+            - name: SHARED_LOG_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: log-paths-cfm
+                  key: shared_log_path
+          restartPolicy: Never

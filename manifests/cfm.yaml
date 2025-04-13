@@ -4,3 +4,39 @@ metadata:
   name: log-paths-cfm
 data:
   shared_log_path: /shared-logs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: failure-config
+data:
+  enabled: "false"  # Set to "true" to enable failure simulation, "false" to disable
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: log-script-cfm
+data:
+  quake-log.sh: |
+    #!/bin/sh
+    
+    # Exit the script immediately if any command within the script 
+    # returns a non-zero exit status (i.e., fails) 
+    set -e
+    
+    # Optional token for auditing/debug (not required for access in this case)
+    TOKEN_FILE="/secrets/ACCESS_TOKEN"
+    if [ -f "$TOKEN_FILE" ]; then
+      echo "Token loaded from secret at $TOKEN_FILE"
+    fi
+    
+    # Define log file path (using SHARED_LOG_PATH environment variable)
+    logfile="$SHARED_LOG_PATH/extreme-quakes-$(date +%F).log"
+    
+    echo "==== $(date) ====" >> "$logfile"
+    curl --fail --silent http://quakewatch-web-svc:5011/today-extreme-earthquakes/6.0 >> "$logfile"
+    echo "" >> "$logfile"
+    
+    echo "Logged extreme quake data to $logfile"
+
+

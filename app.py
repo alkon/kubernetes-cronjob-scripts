@@ -8,8 +8,14 @@ from flask import Flask
 from dashboard import dashboard_blueprint
 from utils import timestamp_to_str  # Import our custom filter
 
+# Initialize dashboard_logger
+dashboard_logger = logging.getLogger('dashboard_access')
+
 def create_app():
     app = Flask(__name__)
+
+    # Configure dashboard logger
+    configure_dashboard_logger(app)
 
     # -------------------------
     # Logging Configuration
@@ -43,6 +49,26 @@ def create_app():
     app.jinja_env.filters['timestamp_to_str'] = timestamp_to_str
 
     return app
+
+def configure_dashboard_logger(app):
+    if 'KUBERNETES_SERVICE_HOST' in os.environ or os.path.exists('/var/run/secrets/kubernetes.io/serviceaccount/token'):
+        # Running inside Kubernetes
+        log_dir = os.environ.get('SHARED_LOG_PATH', '/shared-logs')
+    else:
+        # Running locally
+        log_dir = 'local_logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
+    global dashboard_logger  # Make sure we're using the module-level logger
+    dashboard_logger.setLevel(logging.INFO)
+    handler = RotatingFileHandler(os.path.join(log_dir, 'dashboard_access.log'), maxBytes=1000000, backupCount=3)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(module)s - %(message)s')
+    handler.setFormatter(formatter)
+    dashboard_logger.addHandler(handler)
+
+    # Init dashboard_logger reference to be used in other app parts
+    app.dashboard_logger = dashboard_logger
 
 if __name__ == '__main__':
     app = create_app()

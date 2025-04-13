@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from utils import COUNTRIES, get_last_earthquakes
 import requests
 
+# Init the Dashboard's Blueprint
 dashboard_blueprint = Blueprint('dashboard', __name__)
 
 class EarthquakeDashboard:
@@ -60,19 +61,33 @@ class EarthquakeDashboard:
     @dashboard_blueprint.route('/today-extreme-earthquakes/<float:minmag>')
     def today_extreme_earthquakes(minmag):
         """
-        Fetch extreme earthquakes (magnitude > minmag) for the last day.
+        Fetch extreme earthquakes (magnitude >= minmag) for the last day and log them if found.
         """
         earthquakes_resp = get_last_earthquakes(1, minmag)
+        dashboard_logger = current_app.dashboard_logger
 
-        if isinstance(earthquakes_resp, dict) and 'items' not in earthquakes_resp:
-            earthquakes_resp = {
-                'message': f"No earthquake events found today in the range of {minmag} or more"
-            }
+        dashboard_logger.info(f"Endpoint '/today-extreme-earthquakes/{minmag}' accessed by {request.remote_addr}")
 
-        # Check if events were returned and update the message if not
-        if 'events' in earthquakes_resp and not earthquakes_resp['events']:
-            earthquakes_resp['message'] = f"No earthquake events found today in the range of {minmag} or more"
+        # --- ADD THESE LINES TEMPORARILY ---
+        dashboard_logger.info(f"Raw earthquakes_resp: {earthquakes_resp}")
+        events = earthquakes_resp.get('events', [])
+        if events:
+            for event in events:
+                dashboard_logger.info(f"Raw event data: {event}")
+        # --- END OF TEMPORARY LINES ---
 
+        if events:
+            message = f"Found {len(events)} extreme earthquakes (magnitude >= {minmag})"
+            dashboard_logger.info(f"{message}:")
+
+            for event in events:
+                dashboard_logger.info(
+                    f"- Magnitude: {event.get('magnitude')}, Location: {event.get('location')}, Time: {event.get('time')}")
+        else:
+            message = f"No extreme earthquakes found today (magnitude >= {minmag})."
+            dashboard_logger.info(f"{message}:")
+
+        earthquakes_resp['message'] = message
         return jsonify(earthquakes_resp)
 
 ###########################################################################
@@ -205,3 +220,6 @@ class EarthquakeDashboard:
                                countries=list(COUNTRIES.keys()),
                                top_events=top_events,
                                last_event=last_event)
+
+
+

@@ -2,7 +2,7 @@ services:
   web:
     build:
       context: .
-    image: quakewatch-web:2.0.0 # Tag with version 2.0.0
+    image: quakewatch-web:2.0.1 # Tag with version 2.0.1
     ports:
       - "${APP_PORT}:${APP_PORT}" # Uses environment variable for port mapping
     environment:

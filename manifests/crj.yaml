@@ -1,41 +1,67 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: log-crj
+  name: cpu-burst-cronjob
 spec:
-  schedule: "*/1 * * * *"
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 3
+  schedule: "* * * * *"  # every 1 min
   jobTemplate:
     spec:
       template:
         spec:
-          volumes:
-          - name: log-volume
-            persistentVolumeClaim:
-              claimName: log-pvc
-          - name: scripts-volume
-            emptyDir: {}
-          initContainers:
-          - name: get-scripts
-            image: alpine/git
-            command: ["git", "clone", "https://github.com/alkon/kubernetes-cronjob-scripts.git", "/scripts"]
-            volumeMounts:
-            - name: scripts-volume
-              mountPath: /scripts
           containers:
-          - name: date-generator
-            image: busybox:latest
-            command: ["/bin/sh", "/scripts/log_script.sh"]
-            volumeMounts:
-            - name: log-volume
-              mountPath: /shared-logs
-            - name: scripts-volume
-              mountPath: /scripts
-            env:
-            - name: SHARED_LOG_PATH
-              valueFrom:
-                configMapKeyRef:
-                  name: log-paths-cfm
-                  key: shared_log_path
+            - name: stress-ng
+              image: alpine:3.19
+              command: [ "sh", "-c" ]
+              args:
+                - |
+                  echo "📦 Installing stress...";
+                  apk add --no-cache stress;
+                  echo "🔥 Starting stress...";
+                  stress --cpu 1 --timeout 20;
+                  echo "💤 Sleeping 40s...";
+                  sleep 40;
+              resources:
+                requests:
+                  cpu: "100m"
+                limits:
+                  cpu: "500m"
           restartPolicy: Never
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: log-extreme-quakes
+spec:
+  schedule: "* 15 * * *"  # every day at 3:00 PM (i.e., 15:00)
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: quake-logger
+              image: curlimages/curl:8.5.0
+              command: ["/bin/sh", "/scripts/quake-log.sh"]
+              env:
+                - name: SHARED_LOG_PATH
+                  value: /logs
+              volumeMounts:
+                - name: logs-volume
+                  mountPath: /logs
+                - name: script-volume
+                  mountPath: /scripts
+                  readOnly: true
+                - name: secret-volume
+                  mountPath: /secrets
+                  readOnly: true  # Ensure the secret is mounted read-only
+          volumes:
+            - name: logs-volume
+              persistentVolumeClaim:
+                claimName: quake-logs-pvc
+            - name: script-volume
+              configMap:
+                name: log-script-cfm
+            - name: secret-volume
+              secret:
+                secretName: quake-log-token  # Mount secret containing the token
