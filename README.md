@@ -187,25 +187,53 @@
 
 #### a. Use ConfigMaps and Secrets to Manage Configuration
 
-#### Goal:
+#### Goal
 - To externalize application configuration from container images, enhancing **scalability** and **manageability**. ConfigMaps handle non-sensitive configuration, while Secrets securely manage sensitive information.
 
-#### How It Works
+#### Steps
+- **Apply Manifests Sequentially:** To ensure Kubernetes resources are created in the correct order, especially when dependencies exist, apply the manifests in the following sequence:
 
+```bash
+  kubectl apply -f cfg.yaml   # ConfigMaps
+  kubectl apply -f scrt.yaml  # Secrets
+  kubectl apply -f pvc.yaml   # PersistentVolumeClaim
+  kubectl apply -f dpl.yaml   # Deployment
+  kubectl apply -f svc.yaml   # Service
+  kubectl apply -f pod.yaml   # Inspector(debug) Pod
+  kubectl apply -f hpa.yaml   # HorizontalPodAutoscaler
+  kubectl apply -f crj.yaml   # CronJobs 
+```
+
+#### How It Works
 - **Log path configuration** is stored in `log-paths-cfm`, injected as the `SHARED_LOG_PATH` environment variable.
 - **Feature toggle** for failure simulation is set via the `enabled` key in `failure-config`.
 - **Logging script** (`quake-log.sh`) is stored as a `ConfigMap` and used by a sidecar to log quake data regularly.
 - **Access token** used for auditing/debug purposes is stored in `Secret` (`quake-log-token`) and injected into the logging container at runtime.
 - A shared **PersistentVolumeClaim** (`quake-logs-pvc`) enables both the app and the logger to read/write logs.
+- Inspector(debug) pod `quake-log-reader-pod` helps to verify mounted logs
 
-#### 🛠️ Key Manifests
+#### Key Manifests
+- cfg.yaml:
+  - `log-paths-cfm` – defines shared log path
+  - `failure-config` – toggles failure simulation logic
+  - `log-script-cfm` – contains the logging shell script
+- scrt.yaml:
+  - `quake-log-token` – stores sensitive token as a secret
+- dpl.yaml
+  - `quakewatch-web-dpl` – mounts and injects above configs
+- pvc.yaml
+  - `quake-logs-pvc` – shared volume for log data
+- pod.yaml
+  - `quake-log-reader-pod` - debug pod to check the logs mounted
 
-- `log-paths-cfm.yaml` – defines shared log path.
-- `failure-config.yaml` – toggles failure simulation logic.
-- `log-script-cfm.yaml` – contains the logging shell script.
-- `quake-log-token.yaml` – stores sensitive token as a secret.
-- `quakewatch-web-dpl.yaml` – mounts and injects above configs.
-- `quake-logs-pvc.yaml` – shared volume for log data.
+#### Verification
+- View the logs written to the shared volume using debug pod:
+```bash
+   kubectl exec -it quake-log-reader-pod -- sh 
+```
+```sh
+   cat /mnt/logs/*.log
+```
+    
 
----
 
