@@ -7,6 +7,9 @@
    @dashboard_blueprint.route('/today-extreme-earthquakes/<float:minmag>')
    def today_extreme_earthquakes(minmag):
 ```
+- The updated image URL for the QuakeWatch Web application is alkon100/quakewatch-web:2.0.1 on Docker Hub.
+---
+
 ## 1. Kubernetes Cluster Setup
 
 ### a. Set up Kubernetes cluster using Docker Desktop

@@ -1,4 +1,6 @@
 ## Used to test the Cluster setup only
+## No dealing with networking at this setup stage
+## Will be commnted out later, when Deployment and Service resources managed
 
 #apiVersion: v1
 #kind: Pod
