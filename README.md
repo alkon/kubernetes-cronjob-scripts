@@ -1,7 +1,12 @@
 # QuakeWatch
 
-**QuakeWatch** is a Flask-based web application that monitors and displays earthquake data. It leverages Kubernetes to ensure high **scalability**, **availability**, resilience, and efficient management of the application and its related components.
-
+- **QuakeWatch** is a Flask-based web application that monitors and displays earthquake data. It leverages Kubernetes to ensure high **scalability**, **availability**, resilience, and efficient management of the application and its related components.
+- The original app was enriched with an additional endpoint to retrieve today's extreme earthquake data to create daily logs for secret research purposes. The minimum magnitude parameter will be chosen according to the research requirements. The endpoint is:
+```python
+   # minmag is the minimum magnitude to consider as extreme for log creation
+   @dashboard_blueprint.route('/today-extreme-earthquakes/<float:minmag>')
+   def today_extreme_earthquakes(minmag):
+```
 ## 1. Kubernetes Cluster Setup
 
 ### a. Set up Kubernetes cluster using Docker Desktop
@@ -214,6 +219,7 @@
 - **Access token** used for accessing external resources is stored in a `Secret` (`quake-log-token`) and securely mounted into the logging container at runtime.
 - A shared **PersistentVolumeClaim** (`quake-logs-pvc`) provides persistent storage, allowing the `quake-logger` CronJob to write log files that can be inspected later by other Pods (like the application or the `quake-log-reader-pod`).
 - The `log-extreme-quakes` **CronJob** is configured to run daily at 15:00 (as defined by the `schedule: "* 15 * * *"`). It executes a Pod with a container (`quake-logger`) that runs the `quake-log.sh` script. This script writes the earthquake logs to the `/logs` directory within its container.
+- The minimum magnitude `minmag` for logging earthquakes is set to 6.0 on the Richter scale, in accordance with research requirements. This value is built into the CronJob script, and only earthquakes with a magnitude of at least 6.0 are logged for the research.
 - The `/logs` directory in the `quake-logger` container is mounted to the `quake-logs-pvc` using the `volumes` and `volumeMounts` definitions. This ensures that the logs are written to the persistent volume.
 - Inspector(debug) pod `quake-log-reader-pod` helps to verify the logs written to the shared PersistentVolumeClaim by mounting the same `quake-logs-pvc`.
 ---
