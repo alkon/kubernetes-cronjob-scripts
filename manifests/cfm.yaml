@@ -8,9 +8,9 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: failure-config
+  name: liveness-failure-cfm
 data:
-  enabled: "false"  # Set to "true" to enable failure simulation, "false" to disable
+  enabled: "false"  # Set to "true" to enable LIVENESS failure simulation, "false" to disable
 ---
 apiVersion: v1
 kind: ConfigMap
